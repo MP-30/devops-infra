@@ -1,0 +1,58 @@
+services:
+
+  jenkins-controller:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-controller
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - devops-network
+
+  linux-agent:
+    image: jenkins/inbound-agent:latest
+    container_name: linux-agent
+    restart: unless-stopped
+    environment:
+      - JENKINS_URL=${JENKINS_URL}
+      - JENKINS_SECRET=${LINUX_AGENT_SECRET}
+      - JENKINS_AGENT_NAME=linux-agent
+    networks:
+      - devops-network
+
+  docker-agent:
+    image: jenkins/inbound-agent:latest
+    container_name: docker-agent
+    restart: unless-stopped
+    user: root
+    environment:
+      - JENKINS_URL=${JENKINS_URL}
+      - JENKINS_SECRET=${DOCKER_AGENT_SECRET}
+      - JENKINS_AGENT_NAME=docker-agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devops-network
+
+  dind-agent:
+    build:
+      context: .
+      dockerfile: ./jenkins/agents/dind/Dockerfile
+    container_name: dind-agent
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - JENKINS_URL=${JENKINS_URL}
+      - JENKINS_SECRET=${DIND_AGENT_SECRET}
+      - JENKINS_AGENT_NAME=dind-agent
+    networks:
+      - devops-network
+
+volumes:
+  jenkins_home:
+
+networks:
+  devops-network:
